@@ -61,6 +61,12 @@ export default {
 					'accent-foreground': 'hsl(var(--sidebar-accent-foreground))',
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
+				},
+				finance: {
+					income: '#10B981',
+					expense: '#EF4444',
+					primary: '#2563EB',
+					warning: '#F59E0B'
 				}
 			},
 			borderRadius: {
