@@ -30,17 +30,9 @@ interface Goal {
 
 function Index() {
   const [activeTab, setActiveTab] = useState('dashboard')
-  const [transactions, setTransactions] = useState<Transaction[]>([
-    { id: '1', type: 'income', amount: 5000, category: 'Зарплата', description: 'Основная работа', date: '2024-09-20' },
-    { id: '2', type: 'expense', amount: 1200, category: 'Продукты', description: 'Покупки в магазине', date: '2024-09-19' },
-    { id: '3', type: 'expense', amount: 800, category: 'Транспорт', description: 'Проездной', date: '2024-09-18' },
-    { id: '4', type: 'income', amount: 2000, category: 'Фриланс', description: 'Дополнительный заработок', date: '2024-09-17' }
-  ])
+  const [transactions, setTransactions] = useState<Transaction[]>([])
 
-  const [goals, setGoals] = useState<Goal[]>([
-    { id: '1', title: 'Новый ноутбук', targetAmount: 80000, currentAmount: 25000, deadline: '2024-12-31' },
-    { id: '2', title: 'Отпуск', targetAmount: 150000, currentAmount: 90000, deadline: '2024-06-01' }
-  ])
+  const [goals, setGoals] = useState<Goal[]>([])
 
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
@@ -59,6 +51,14 @@ function Index() {
       id: Date.now().toString()
     }
     setTransactions([newTransaction, ...transactions])
+  }
+
+  const addGoal = (goal: Omit<Goal, 'id'>) => {
+    const newGoal = {
+      ...goal,
+      id: Date.now().toString()
+    }
+    setGoals([...goals, newGoal])
   }
 
   const NavigationButton = ({ tab, icon, label }: { tab: string, icon: string, label: string }) => (
@@ -381,10 +381,20 @@ function Index() {
               <div className="space-y-6">
                 <div className="flex items-center justify-between">
                   <h2 className="text-3xl font-bold text-gray-900">Финансовые цели</h2>
-                  <Button className="gap-2">
-                    <Icon name="Plus" size={16} />
-                    Добавить цель
-                  </Button>
+                  <Sheet>
+                    <SheetTrigger asChild>
+                      <Button className="gap-2">
+                        <Icon name="Plus" size={16} />
+                        Добавить цель
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent>
+                      <SheetHeader>
+                        <SheetTitle>Новая финансовая цель</SheetTitle>
+                      </SheetHeader>
+                      <GoalForm onSubmit={addGoal} />
+                    </SheetContent>
+                  </Sheet>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -441,6 +451,85 @@ function Index() {
         </div>
       </div>
     </div>
+  )
+}
+
+function GoalForm({ onSubmit }: { onSubmit: (goal: Omit<Goal, 'id'>) => void }) {
+  const [formData, setFormData] = useState({
+    title: '',
+    targetAmount: '',
+    currentAmount: '',
+    deadline: ''
+  })
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (formData.title && formData.targetAmount && formData.deadline) {
+      onSubmit({
+        ...formData,
+        targetAmount: parseFloat(formData.targetAmount),
+        currentAmount: parseFloat(formData.currentAmount) || 0
+      })
+      setFormData({
+        title: '',
+        targetAmount: '',
+        currentAmount: '',
+        deadline: ''
+      })
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6 mt-6">
+      <div className="space-y-2">
+        <Label htmlFor="title">Название цели</Label>
+        <Input
+          id="title"
+          value={formData.title}
+          onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+          placeholder="Например, Новый ноутбук"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="targetAmount">Целевая сумма (₽)</Label>
+        <Input
+          id="targetAmount"
+          type="number"
+          value={formData.targetAmount}
+          onChange={(e) => setFormData({ ...formData, targetAmount: e.target.value })}
+          placeholder="0"
+          required
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="currentAmount">Текущая сумма (₽)</Label>
+        <Input
+          id="currentAmount"
+          type="number"
+          value={formData.currentAmount}
+          onChange={(e) => setFormData({ ...formData, currentAmount: e.target.value })}
+          placeholder="0"
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="deadline">Срок достижения</Label>
+        <Input
+          id="deadline"
+          type="date"
+          value={formData.deadline}
+          onChange={(e) => setFormData({ ...formData, deadline: e.target.value })}
+          required
+        />
+      </div>
+
+      <Button type="submit" className="w-full">
+        Создать цель
+      </Button>
+    </form>
   )
 }
 
