@@ -1,0 +1,56 @@
+{
+  "tests": [
+    {
+      "name": "Get transactions list",
+      "method": "GET",
+      "path": "/?action=list",
+      "headers": {
+        "Authorization": "Bearer test-token"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "transactions": "array"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create new transaction",
+      "method": "POST",
+      "path": "/",
+      "headers": {
+        "Authorization": "Bearer test-token"
+      },
+      "body": {
+        "action": "create_transaction",
+        "type": "expense",
+        "amount": 1000,
+        "category": "Продукты",
+        "description": "Покупки в магазине",
+        "date": "2024-09-23",
+        "tag_ids": []
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "transaction": {
+          "id": "number",
+          "type": "string",
+          "amount": "number"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Get user tags",
+      "method": "GET",
+      "path": "/?action=tags",
+      "headers": {
+        "Authorization": "Bearer test-token"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "tags": "array"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

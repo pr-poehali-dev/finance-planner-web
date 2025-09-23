@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -9,6 +9,8 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
+import { useAuth } from '@/contexts/AuthContext'
+import { AuthModal } from '@/components/AuthModal'
 import Icon from '@/components/ui/icon'
 
 interface Transaction {
@@ -29,10 +31,46 @@ interface Goal {
 }
 
 function Index() {
+  const { user, logout, loading } = useAuth()
+  const [authModalOpen, setAuthModalOpen] = useState(false)
   const [activeTab, setActiveTab] = useState('dashboard')
   const [transactions, setTransactions] = useState<Transaction[]>([])
-
   const [goals, setGoals] = useState<Goal[]>([])
+
+  useEffect(() => {
+    if (!loading && !user) {
+      setAuthModalOpen(true)
+    }
+  }, [user, loading])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <Icon name="Loader2" size={48} className="mx-auto mb-4 text-primary animate-spin" />
+          <h3 className="text-xl font-medium text-gray-500">Загрузка...</h3>
+        </div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return (
+      <>
+        <div className="min-h-screen flex items-center justify-center bg-gray-50">
+          <div className="text-center">
+            <Icon name="Wallet" size={64} className="mx-auto mb-4 text-primary" />
+            <h1 className="text-4xl font-bold text-gray-900 mb-2">FinPlan</h1>
+            <p className="text-xl text-gray-600 mb-8">Ваш личный финансовый планировщик</p>
+            <Button size="lg" onClick={() => setAuthModalOpen(true)}>
+              Войти или зарегистрироваться
+            </Button>
+          </div>
+        </div>
+        <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
+      </>
+    )
+  }
 
   const totalIncome = transactions.filter(t => t.type === 'income').reduce((sum, t) => sum + t.amount, 0)
   const totalExpenses = transactions.filter(t => t.type === 'expense').reduce((sum, t) => sum + t.amount, 0)
@@ -79,7 +117,9 @@ function Index() {
         <div className="w-64 bg-white border-r border-gray-200 p-6 hidden lg:block">
           <div className="mb-8">
             <h1 className="text-2xl font-bold text-gray-900">FinPlan</h1>
-            <p className="text-sm text-gray-500">Финансовый планировщик</p>
+            <p className="text-sm text-gray-500">
+              {user.first_name ? `Привет, ${user.first_name}!` : user.email}
+            </p>
           </div>
           
           <nav className="space-y-2">
@@ -89,6 +129,13 @@ function Index() {
             <NavigationButton tab="goals" icon="Target" label="Цели" />
             <NavigationButton tab="calendar" icon="Calendar" label="Календарь" />
             <NavigationButton tab="settings" icon="Settings" label="Настройки" />
+            
+            <div className="mt-8 pt-4 border-t border-gray-200">
+              <Button variant="ghost" className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={logout}>
+                <Icon name="LogOut" size={20} />
+                Выйти
+              </Button>
+            </div>
           </nav>
         </div>
 
@@ -113,6 +160,13 @@ function Index() {
                   <NavigationButton tab="goals" icon="Target" label="Цели" />
                   <NavigationButton tab="calendar" icon="Calendar" label="Календарь" />
                   <NavigationButton tab="settings" icon="Settings" label="Настройки" />
+                  
+                  <div className="mt-8 pt-4 border-t border-gray-200">
+                    <Button variant="ghost" className="w-full justify-start gap-3 text-red-600 hover:text-red-700 hover:bg-red-50" onClick={logout}>
+                      <Icon name="LogOut" size={20} />
+                      Выйти
+                    </Button>
+                  </div>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -450,6 +504,8 @@ function Index() {
           </div>
         </div>
       </div>
+      
+      <AuthModal isOpen={authModalOpen} onClose={() => setAuthModalOpen(false)} />
     </div>
   )
 }

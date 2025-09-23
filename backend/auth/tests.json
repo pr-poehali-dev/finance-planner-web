@@ -1,0 +1,59 @@
+{
+  "tests": [
+    {
+      "name": "Register new user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "register",
+        "email": "test@example.com",
+        "password": "password123",
+        "first_name": "Test",
+        "last_name": "User"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "token": "string",
+        "user": {
+          "id": "number",
+          "email": "string",
+          "first_name": "string",
+          "last_name": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Login existing user",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "login",
+        "email": "test@example.com",
+        "password": "password123"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "token": "string",
+        "user": {
+          "email": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Reset password request",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "action": "reset_password",
+        "email": "test@example.com"
+      },
+      "expectedStatus": 200,
+      "expectedBody": {
+        "message": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
