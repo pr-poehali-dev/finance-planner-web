@@ -13,15 +13,15 @@ import base64
 import time
 import secrets
 import smtplib
-from email.mime.text import MimeText
-from email.mime.multipart import MimeMultipart
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from typing import Dict, Any, Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import bcrypt
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
-    method: str = event.get('httpMethod', 'GET')
+    method: str = event.get('httpMethod', 'POST')
     
     # Handle CORS OPTIONS request
     if method == 'OPTIONS':
@@ -37,6 +37,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'isBase64Encoded': False
         }
     
+    conn = None
     try:
         # Подключение к базе данных
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
@@ -73,7 +74,7 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     except Exception as e:
         return error_response(f'Server error: {str(e)}', 500)
     finally:
-        if 'conn' in locals():
+        if conn:
             conn.close()
 
 def handle_register(conn, data: Dict[str, Any]) -> Dict[str, Any]:
@@ -323,7 +324,7 @@ def send_reset_email(email: str, reset_token: str):
     sender_password = os.environ['EMAIL_PASSWORD']
     
     # Создание письма
-    msg = MimeMultipart()
+    msg = MIMEMultipart()
     msg['From'] = sender_email
     msg['To'] = email
     msg['Subject'] = 'Сброс пароля - FinPlan'
@@ -346,7 +347,7 @@ def send_reset_email(email: str, reset_token: str):
     Команда FinPlan
     """
     
-    msg.attach(MimeText(body, 'plain', 'utf-8'))
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
     
     # Отправка
     with smtplib.SMTP(smtp_server, smtp_port) as server:
@@ -362,7 +363,7 @@ def success_response(data: Any) -> Dict[str, Any]:
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
         },
-        'body': json.dumps(data),
+        'body': json.dumps(data, ensure_ascii=False),
         'isBase64Encoded': False
     }
 
@@ -374,6 +375,6 @@ def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
             'Content-Type': 'application/json',
             'Access-Control-Allow-Origin': '*'
         },
-        'body': json.dumps({'error': message}),
+        'body': json.dumps({'error': message}, ensure_ascii=False),
         'isBase64Encoded': False
     }

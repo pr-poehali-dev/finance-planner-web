@@ -29,8 +29,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
     email: '',
     password: '',
     confirmPassword: '',
-    firstName: '',
-    lastName: ''
+    firstName: ''
   })
   
   const [resetForm, setResetForm] = useState({
@@ -83,7 +82,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
         registerForm.email,
         registerForm.password,
         registerForm.firstName,
-        registerForm.lastName
+        ''
       )
       if (result.success) {
         onClose()
@@ -91,8 +90,7 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
           email: '',
           password: '',
           confirmPassword: '',
-          firstName: '',
-          lastName: ''
+          firstName: ''
         })
       } else {
         setError(result.error || 'Ошибка регистрации')
@@ -201,25 +199,14 @@ export function AuthModal({ isOpen, onClose }: AuthModalProps) {
 
           <TabsContent value="register" className="space-y-4 mt-4">
             <form onSubmit={handleRegister} className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="register-firstname">Имя</Label>
-                  <Input
-                    id="register-firstname"
-                    value={registerForm.firstName}
-                    onChange={(e) => setRegisterForm({ ...registerForm, firstName: e.target.value })}
-                    placeholder="Иван"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="register-lastname">Фамилия</Label>
-                  <Input
-                    id="register-lastname"
-                    value={registerForm.lastName}
-                    onChange={(e) => setRegisterForm({ ...registerForm, lastName: e.target.value })}
-                    placeholder="Иванов"
-                  />
-                </div>
+              <div className="space-y-2">
+                <Label htmlFor="register-firstname">Имя</Label>
+                <Input
+                  id="register-firstname"
+                  value={registerForm.firstName}
+                  onChange={(e) => setRegisterForm({ ...registerForm, firstName: e.target.value })}
+                  placeholder="Иван"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="register-email">Email</Label>
