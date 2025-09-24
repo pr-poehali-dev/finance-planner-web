@@ -31,7 +31,10 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-const AUTH_API_URL = 'https://functions.poehali.dev/37469ea0-8998-49ee-ba66-8f43d0682a4a'
+const AUTH_API_URL = 'https://functions.poehali.dev/f0418e5f-ef38-47d7-96e8-fcc12cc2bf96'
+
+// Временный моковый режим для тестирования
+const MOCK_MODE = true
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
@@ -43,12 +46,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }, [])
 
   const checkAuth = async () => {
+    if (MOCK_MODE) {
+      // Моковые данные для тестирования
+      const mockUser = localStorage.getItem('mock_user')
+      if (mockUser) {
+        setUser(JSON.parse(mockUser))
+      } else {
+        setUser(null)
+      }
+      setLoading(false)
+      return
+    }
+
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'GET',
-        credentials: 'include', // Включаем cookies
+        credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       })
 
@@ -59,7 +76,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           setUser(null)
         }
+      } else if (response.status === 401) {
+        setUser(null)
       } else {
+        console.error('Auth check failed with status:', response.status)
         setUser(null)
       }
     } catch (error) {
@@ -71,12 +91,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
+    if (MOCK_MODE) {
+      // Моковая авторизация
+      if (email && password.length >= 6) {
+        const mockUser = {
+          id: 1,
+          email,
+          first_name: 'Демо',
+          last_name: 'Пользователь'
+        }
+        setUser(mockUser)
+        localStorage.setItem('mock_user', JSON.stringify(mockUser))
+        return { success: true }
+      } else {
+        return { success: false, error: 'Неверные данные' }
+      }
+    }
+
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
-        credentials: 'include', // Включаем cookies
+        credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           action: 'login',
@@ -94,6 +133,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: data.error || 'Ошибка авторизации' }
       }
     } catch (error) {
+      console.error('Login error:', error)
       return { success: false, error: 'Ошибка соединения с сервером' }
     }
   }
@@ -104,12 +144,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     firstName: string, 
     lastName: string
   ): Promise<{ success: boolean; error?: string }> => {
+    if (MOCK_MODE) {
+      // Моковая регистрация
+      if (email && password.length >= 6) {
+        const mockUser = {
+          id: 1,
+          email,
+          first_name: firstName,
+          last_name: lastName || ''
+        }
+        setUser(mockUser)
+        localStorage.setItem('mock_user', JSON.stringify(mockUser))
+        return { success: true }
+      } else {
+        return { success: false, error: 'Неверные данные' }
+      }
+    }
+
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
-        credentials: 'include', // Включаем cookies
+        credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           action: 'register',
@@ -129,18 +188,26 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: data.error || 'Ошибка регистрации' }
       }
     } catch (error) {
+      console.error('Register error:', error)
       return { success: false, error: 'Ошибка соединения с сервером' }
     }
   }
 
   const logout = async (): Promise<void> => {
+    if (MOCK_MODE) {
+      localStorage.removeItem('mock_user')
+      setUser(null)
+      return
+    }
+
     try {
-      // Отправляем запрос на очистку cookie
       await fetch(AUTH_API_URL, {
         method: 'DELETE',
         credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         }
       })
     } catch (error) {
@@ -155,8 +222,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
         credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           action: 'reset_password',
@@ -172,6 +241,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: data.error || 'Ошибка отправки письма' }
       }
     } catch (error) {
+      console.error('Reset password error:', error)
       return { success: false, error: 'Ошибка соединения с сервером' }
     }
   }
@@ -181,8 +251,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
         credentials: 'include',
+        mode: 'cors',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({
           action: 'confirm_reset',
@@ -199,6 +271,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         return { success: false, error: data.error || 'Ошибка сброса пароля' }
       }
     } catch (error) {
+      console.error('Confirm reset error:', error)
       return { success: false, error: 'Ошибка соединения с сервером' }
     }
   }

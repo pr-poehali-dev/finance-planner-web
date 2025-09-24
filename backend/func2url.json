@@ -1,4 +1,6 @@
 {
+  "test-auth": "https://functions.poehali.dev/b74cb3bf-110a-4f60-845a-57e2a5355be9",
+  "user-auth": "https://functions.poehali.dev/f0418e5f-ef38-47d7-96e8-fcc12cc2bf96",
   "goals": "https://functions.poehali.dev/61374f29-3f4a-4325-acc0-5ed4fbcbd77e",
   "calendar": "https://functions.poehali.dev/325cbca9-ff34-4fef-9d79-e5619ad8e62e",
   "transactions": "https://functions.poehali.dev/2fc3f1dd-8b8a-491e-9c11-3abdf16c1cb7"
