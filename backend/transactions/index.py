@@ -11,9 +11,7 @@ from typing import Dict, Any, Optional, List
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime, date
-import sys
-sys.path.append('/opt')
-from auth.index import verify_jwt_token
+
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     method: str = event.get('httpMethod', 'GET')
@@ -25,24 +23,18 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Auth-Token, Cookie',
+                'Access-Control-Allow-Credentials': 'true',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
             'isBase64Encoded': False
         }
     
-    # Проверка авторизации
-    auth_header = event.get('headers', {}).get('Authorization', '')
-    if not auth_header.startswith('Bearer '):
-        return error_response('Authorization required', 401)
-    
-    token = auth_header[7:]
-    user_data = verify_jwt_token(token)
-    if not user_data:
-        return error_response('Invalid token', 401)
-    
-    user_id = user_data['user_id']
+    # Извлечение userId из cookie
+    user_id = extract_user_id_from_cookies(event)
+    if not user_id:
+        return error_response('Authentication required', 401)
     
     try:
         conn = psycopg2.connect(os.environ['DATABASE_URL'])
@@ -457,11 +449,72 @@ def success_response(data: Any) -> Dict[str, Any]:
         'statusCode': 200,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': 'true'
         },
         'body': json.dumps(data, default=str),
         'isBase64Encoded': False
     }
+
+def extract_user_id_from_cookies(event: Dict[str, Any]) -> Optional[int]:
+    """Извлекает user_id из JWT токена в cookies"""
+    try:
+        import hashlib
+        import hmac
+        import base64
+        import time
+        
+        headers = event.get('headers', {})
+        cookies = headers.get('Cookie', '')
+        
+        if not cookies:
+            return None
+        
+        # Извлекаем токен из cookies
+        token = None
+        for cookie in cookies.split(';'):
+            cookie = cookie.strip()
+            if cookie.startswith('auth_token='):
+                token = cookie.split('=', 1)[1]
+                break
+        
+        if not token:
+            return None
+        
+        # Проверяем JWT токен
+        parts = token.split('.')
+        if len(parts) != 3:
+            return None
+        
+        header_b64, payload_b64, signature_b64 = parts
+        
+        # Проверка подписи
+        message = f'{header_b64}.{payload_b64}'
+        expected_signature = hmac.new(
+            os.environ.get('JWT_SECRET', 'default-secret').encode(),
+            message.encode(),
+            hashlib.sha256
+        ).digest()
+        
+        # Добавляем отсутствующие символы '='
+        signature_b64 += '=' * (4 - len(signature_b64) % 4)
+        actual_signature = base64.urlsafe_b64decode(signature_b64)
+        
+        if not hmac.compare_digest(expected_signature, actual_signature):
+            return None
+        
+        # Декодирование payload
+        payload_b64 += '=' * (4 - len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64).decode())
+        
+        # Проверка срока действия
+        if payload.get('exp', 0) < time.time():
+            return None
+        
+        return payload.get('user_id')
+        
+    except Exception:
+        return None
 
 def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
     """Ответ с ошибкой"""
@@ -469,7 +522,8 @@ def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': 'true'
         },
         'body': json.dumps({'error': message}),
         'isBase64Encoded': False

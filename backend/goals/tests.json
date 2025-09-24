@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Get goals without authentication",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create goal without authentication",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Test Goal",
+        "target_amount": 1000,
+        "description": "Test description"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}

@@ -9,10 +9,9 @@ interface User {
 
 interface AuthContextType {
   user: User | null
-  token: string | null
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>
   register: (email: string, password: string, firstName: string, lastName: string) => Promise<{ success: boolean; error?: string }>
-  logout: () => void
+  logout: () => Promise<void>
   resetPassword: (email: string) => Promise<{ success: boolean; error?: string }>
   confirmReset: (token: string, password: string) => Promise<{ success: boolean; error?: string }>
   loading: boolean
@@ -36,25 +35,19 @@ const AUTH_API_URL = 'https://functions.poehali.dev/37469ea0-8998-49ee-ba66-8f43
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null)
-  const [token, setToken] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    const storedToken = localStorage.getItem('finplan_token')
-    if (storedToken) {
-      setToken(storedToken)
-      verifyToken(storedToken)
-    } else {
-      setLoading(false)
-    }
+    // Проверяем авторизацию через cookie
+    checkAuth()
   }, [])
 
-  const verifyToken = async (tokenToVerify: string) => {
+  const checkAuth = async () => {
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'GET',
+        credentials: 'include', // Включаем cookies
         headers: {
-          'Authorization': `Bearer ${tokenToVerify}`,
           'Content-Type': 'application/json'
         }
       })
@@ -64,17 +57,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         if (data.valid && data.user) {
           setUser(data.user)
         } else {
-          localStorage.removeItem('finplan_token')
-          setToken(null)
+          setUser(null)
         }
       } else {
-        localStorage.removeItem('finplan_token')
-        setToken(null)
+        setUser(null)
       }
     } catch (error) {
-      console.error('Token verification failed:', error)
-      localStorage.removeItem('finplan_token')
-      setToken(null)
+      console.error('Auth check failed:', error)
+      setUser(null)
     } finally {
       setLoading(false)
     }
@@ -84,6 +74,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
+        credentials: 'include', // Включаем cookies
         headers: {
           'Content-Type': 'application/json'
         },
@@ -96,10 +87,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       const data = await response.json()
 
-      if (response.ok && data.token) {
-        setToken(data.token)
+      if (response.ok && data.user) {
         setUser(data.user)
-        localStorage.setItem('finplan_token', data.token)
         return { success: true }
       } else {
         return { success: false, error: data.error || 'Ошибка авторизации' }
@@ -118,6 +107,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
+        credentials: 'include', // Включаем cookies
         headers: {
           'Content-Type': 'application/json'
         },
@@ -126,16 +116,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           email,
           password,
           first_name: firstName,
-          last_name: lastName
+          last_name: lastName || ''
         })
       })
 
       const data = await response.json()
 
-      if (response.ok && data.token) {
-        setToken(data.token)
+      if (response.ok && data.user) {
         setUser(data.user)
-        localStorage.setItem('finplan_token', data.token)
         return { success: true }
       } else {
         return { success: false, error: data.error || 'Ошибка регистрации' }
@@ -145,16 +133,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const logout = () => {
+  const logout = async (): Promise<void> => {
+    try {
+      // Отправляем запрос на очистку cookie
+      await fetch(AUTH_API_URL, {
+        method: 'DELETE',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+    } catch (error) {
+      console.error('Logout request failed:', error)
+    }
+    
     setUser(null)
-    setToken(null)
-    localStorage.removeItem('finplan_token')
   }
 
   const resetPassword = async (email: string): Promise<{ success: boolean; error?: string }> => {
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -180,6 +180,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     try {
       const response = await fetch(AUTH_API_URL, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json'
         },
@@ -204,7 +205,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const value: AuthContextType = {
     user,
-    token,
     login,
     register,
     logout,

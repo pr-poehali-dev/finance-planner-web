@@ -30,7 +30,8 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             'headers': {
                 'Access-Control-Allow-Origin': '*',
                 'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Auth-Token, Authorization',
+                'Access-Control-Allow-Headers': 'Content-Type, X-User-Id, X-Auth-Token, Authorization, Cookie',
+                'Access-Control-Allow-Credentials': 'true',
                 'Access-Control-Max-Age': '86400'
             },
             'body': '',
@@ -58,15 +59,48 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 return error_response('Invalid action', 400)
         
         elif method == 'GET':
-            # Проверка токена
-            auth_header = event.get('headers', {}).get('Authorization', '')
-            if auth_header.startswith('Bearer '):
-                token = auth_header[7:]
+            # Проверка токена в cookies
+            headers = event.get('headers', {})
+            cookies = headers.get('Cookie', '')
+            token = extract_token_from_cookies(cookies)
+            
+            if token:
                 user_data = verify_jwt_token(token)
                 if user_data:
-                    return success_response({'user': user_data, 'valid': True})
+                    # Получаем полную информацию о пользователе
+                    with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                        cur.execute('''
+                            SELECT id, email, first_name, last_name
+                            FROM users WHERE id = %s
+                        ''', (user_data['user_id'],))
+                        
+                        user = cur.fetchone()
+                        if user:
+                            return success_response({
+                                'user': {
+                                    'id': user['id'],
+                                    'email': user['email'],
+                                    'first_name': user['first_name'],
+                                    'last_name': user['last_name']
+                                },
+                                'valid': True
+                            })
             
             return error_response('Invalid token', 401)
+        
+        elif method == 'DELETE':
+            # Выход из системы - очистка cookie
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*',
+                    'Access-Control-Allow-Credentials': 'true',
+                    'Set-Cookie': 'auth_token=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0'
+                },
+                'body': json.dumps({'message': 'Logged out successfully'}, ensure_ascii=False),
+                'isBase64Encoded': False
+            }
         
         else:
             return error_response('Method not allowed', 405)
@@ -355,17 +389,45 @@ def send_reset_email(email: str, reset_token: str):
         server.login(sender_email, sender_password)
         server.send_message(msg)
 
+def success_response_with_cookie(data: Any, token: str) -> Dict[str, Any]:
+    """Успешный ответ с установкой cookie"""
+    return {
+        'statusCode': 200,
+        'headers': {
+            'Content-Type': 'application/json',
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': 'true',
+            'Set-Cookie': f'auth_token={token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age={7*24*3600}'
+        },
+        'body': json.dumps(data, ensure_ascii=False),
+        'isBase64Encoded': False
+    }
+
 def success_response(data: Any) -> Dict[str, Any]:
     """Успешный ответ"""
     return {
         'statusCode': 200,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': 'true'
         },
         'body': json.dumps(data, ensure_ascii=False),
         'isBase64Encoded': False
     }
+
+def extract_token_from_cookies(cookie_header: str) -> Optional[str]:
+    """Извлекает токен из заголовка Cookie"""
+    if not cookie_header:
+        return None
+    
+    cookies = cookie_header.split(';')
+    for cookie in cookies:
+        cookie = cookie.strip()
+        if cookie.startswith('auth_token='):
+            return cookie.split('=', 1)[1]
+    
+    return None
 
 def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
     """Ответ с ошибкой"""
@@ -373,7 +435,8 @@ def error_response(message: str, status_code: int = 400) -> Dict[str, Any]:
         'statusCode': status_code,
         'headers': {
             'Content-Type': 'application/json',
-            'Access-Control-Allow-Origin': '*'
+            'Access-Control-Allow-Origin': '*',
+            'Access-Control-Allow-Credentials': 'true'
         },
         'body': json.dumps({'error': message}, ensure_ascii=False),
         'isBase64Encoded': False

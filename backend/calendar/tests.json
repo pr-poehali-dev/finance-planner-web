@@ -1,0 +1,29 @@
+{
+  "tests": [
+    {
+      "name": "Get events without authentication",
+      "method": "GET",
+      "path": "/",
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    },
+    {
+      "name": "Create event without authentication",
+      "method": "POST",
+      "path": "/",
+      "body": {
+        "title": "Test Event",
+        "start_date": "2025-01-01",
+        "description": "Test description"
+      },
+      "expectedStatus": 401,
+      "expectedBody": {
+        "error": "string"
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
